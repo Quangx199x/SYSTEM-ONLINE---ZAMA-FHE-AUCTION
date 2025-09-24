@@ -1,3 +1,4 @@
+import ("@nomicfoundation/hardhat-toolbox");
 import "@fhevm/hardhat-plugin";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-ethers";
@@ -14,8 +15,11 @@ import "./tasks/FHECounter";
 
 // Run 'npx hardhat vars setup' to see the list of variables that need to be set
 
-const MNEMONIC: string = vars.get("MNEMONIC", "test test test test test test test test test test test junk");
-const INFURA_API_KEY: string = vars.get("INFURA_API_KEY", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+const MNEMONIC: string = vars.get("MNEMONIC", "");
+const INFURA_API_KEY: string = vars.get("INFURA_API_KEY", "");
+
+// Define FHEVM_REPO_ROOT (adjust path to your local clone of https://github.com/zama-ai/fhevm)
+const FHEVM_REPO_ROOT: string = vars.get("FHEVM_REPO_ROOT", "../fhevm"); // e.g., path to cloned repo root
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -24,7 +28,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      sepolia: vars.get("ETHERSCAN_API_KEY", ""),
+      sepolia: vars.get("ETHERSCAN_API_KEY", "8ICJ99N4XPVPJIVZS3K44U4IKQVTNEC6JI"),
     },
   },
   gasReporter: {
@@ -80,6 +84,13 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "cancun",
     },
+    remappings: [
+  // Map trực tiếp đến contracts folder
+  `@fhevm/solidity=${FHEVM_REPO_ROOT}/library-solidity/contracts/`,
+  // Hoặc nếu có sub lib/config: adjust theo tree (e.g., nếu lib là alias)
+  `fhevm=${FHEVM_REPO_ROOT}/library-solidity/contracts/`,
+  `@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/`,
+],
   },
   typechain: {
     outDir: "types",
