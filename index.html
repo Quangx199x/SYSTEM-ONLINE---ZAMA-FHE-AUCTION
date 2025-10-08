@@ -564,56 +564,64 @@
             showNotification('Bid logic is currently disabled for this update. Use a previous version or integrate it here.', 'info');
         }
 
-        // --- FINALIZATION LOGIC (OWNER ONLY) --- 
-        async function requestFinalizeAuction() {
-            if (!fheAuctionContract || !account) {
-                showNotification('Wallet not connected.', 'error');
-                return;
-            }
-            
-            const btn = document.getElementById('finalizeBtn');
-            try {
-                // Pre-check
-                const [owner, finalized, paused] = await Promise.all([
-                    fheAuctionContract.owner(),
-                    fheAuctionContract.isAuctionFinalized(),
-                    fheAuctionContract.paused()
-                ]);
-                
-                const isOwner = account.toLowerCase() === owner.toLowerCase();
-                if (!isOwner) {
-                    showNotification('Only contract owner can finalize.', 'error');
-                    return;
-                }
-                if (finalized) {
-                    showNotification('Auction already finalized.', 'error');
-                    return;
-                }
-                if (Date.now() < auctionEndTime) {
-                    showNotification('Auction is still running.', 'error');
-                    return;
-                }
-                if (paused) {
-                    showNotification('Auction is paused. Unpause first.', 'error');
-                    return;
-                }
-                logMessage('[CHECK] Pre-validation passed: Owner OK, Time OK, Not Finalized, Not Paused.', 'info');
-                
-                btn.innerHTML = '<span class="loading"></span> REQUEST DECRYPT/FINALIZE...';
-                btn.disabled = true;
+// --- FINALIZATION LOGIC (OWNER ONLY) --- 
+async function requestFinalizeAuction() {
+    if (!fheAuctionContract || !account) {
+        showNotification('Wallet not connected.', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('finalizeBtn');
+    try {
+        // Pre-check
+        const [owner, finalized, paused] = await Promise.all([
+            fheAuctionContract.owner(),
+            fheAuctionContract.isAuctionFinalized(),
+            fheAuctionContract.paused()
+        ]);
+        
+        const isOwner = account.toLowerCase() === owner.toLowerCase();
+        if (!isOwner) {
+            showNotification('Only contract owner can finalize.', 'error');
+            return;
+        }
+        if (finalized) {
+            showNotification('Auction already finalized.', 'error');
+            return;
+        }
+        if (Date.now() < auctionEndTime) {
+            showNotification('Auction is still running.', 'error');
+            return;
+        }
+        if (paused) {
+            showNotification('Auction is paused. Unpause first.', 'error');
+            return;
+        }
+        logMessage('[CHECK] Pre-validation passed: Owner OK, Time OK, Not Finalized, Not Paused.', 'info');
+        
+        btn.innerHTML = '<span class="loading"></span> REQUEST DECRYPT/FINALIZE...';
+        btn.disabled = true;
 
-                logMessage('[PROCESS] Attempting to request finalization and decryption...', 'pending');
-                
-                // Call the single requestFinalize function
-                // Bỏ qua ước tính gas và cung cấp Gas Limit an toàn (600,000 là mức an toàn cho FHEVM)
-                const tx = await fheAuctionContract.requestFinalize({gasLimit: 600000});
-                
-                logMessage(`[TX:FINALIZE] Sending requestFinalize transaction. Hash: ${tx.hash.substring(0, 10)}...`, 'pending');
+        logMessage('[PROCESS] Attempting to request finalization and decryption...', 'pending');
+        
+        // VỊ TRÍ SỬA ĐỔI: Thêm Gas Limit thủ công
+        const tx = await fheAuctionContract.requestFinalize({
+            gasLimit: 600000 // Thử mức 600,000 để vượt qua lỗi ước tính gas
+        });
+        
+        logMessage(`[TX:FINALIZE] Sending requestFinalize transaction. Hash: ${tx.hash.substring(0, 10)}...`, 'pending');
 
-                await tx.wait(); 
-                
-                logMessage(`[PENDING] Finalize Request TX confirmed. Waiting for Oracle callback (onDecryptionCallback) to process winners/refunds...`, 'pending');
-                showNotification('Finalization Requested. Waiting for Oracle/KMS to process.', 'info');
+        await tx.wait(); 
+        
+        logMessage(`[PENDING] Finalize Request TX confirmed. Waiting for Oracle callback (onDecryptionCallback) to process winners/refunds...`, 'pending');
+        showNotification('Finalization Requested. Waiting for Oracle/KMS to process.', 'info');
+        
+    } catch (error) {
+        // ... (phần xử lý lỗi giữ nguyên)
+    } finally {
+        // ... (phần finally giữ nguyên)
+    }
+}
                 
             } catch (error) {
                 console.error("Finalize Failed:", error);
