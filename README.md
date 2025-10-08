@@ -1,14 +1,14 @@
-git clone https://github.com/yourusername/fhe-auction-project.git
+``` git clone https://github.com/Quangx199x/SYSTEM-ONLINE---ZAMA-FHE-AUCTION.git
 npm install
 npx hardhat compile
 npx hardhat node
 npx hardhat test
 npx hardhat deploy --network sepolia
-npx hardhat verify --network sepolia 0x76044483b2387720EA449243Eb3d1eE1f5c86fbE "10000000000000000" "0x0000000000000000000000000000000000000000" "0x091F5393DDeBA93C44957A0Bb1B7a63c378cEB4F"
+npx hardhat verify --network sepolia <yourcontract> "10000000000000000" "0x0000000000000000000000000000000000000000" "your-EVM-adress"
 npx hardhat console --network sepolia
 javascript
 npx hardhat test
-
+```
 # FHEAuction: Blind Auction with FHEVM on Sepolia
 
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.27-blue.svg)
@@ -70,11 +70,24 @@ Multi-round auctions run automatically every 24 hours, with auto-refunds for los
 
 ### Installation
 ```bash
-git clone https://github.com/yourusername/fhe-auction-project.git
-cd fhe-auction-project
+mkdir YOURCONTRACT
+cd YOURCONTRACT
+npm init -y
+git clone https://github.com/Quangx199x/SYSTEM-ONLINE---ZAMA-FHE-AUCTION.git
 npm install # or yarn install
 ```
+### Installation Hardhat
+```bash
+npm install --save-dev hardhat
+npx hardhat init
+```
+choose "Create a JavaScript project"
 
+### Installation Dependencies
+```bash
+npm install --save-dev @nomicfoundation/hardhat-toolbox
+npm install dotenv
+```
 ### Environment Variables
 Create a `.env` file:
 ```env
@@ -94,6 +107,12 @@ npx hardhat node
 # In another terminal
 npx hardhat test
 ```
+### Get Test ETH
+
+Open Sepolia faucet get test ETH:
+
+https://www.alchemy.com/faucets/ethereum-sepolia
+
 
 ### Deployment to Sepolia
 ```bash
@@ -103,7 +122,7 @@ Constructor args: `minDeposit` (e.g., 0.01 ETH in wei), `pauserSet` (0x0), `bene
 
 ### Verify on Etherscan
 ```bash
-npx hardhat verify --network sepolia 0x76044483b2387720EA449243Eb3d1eE1f5c86fbE "10000000000000000" "0x0000000000000000000000000000000000000000" "0x091F5393DDeBA93C44957A0Bb1B7a63c378cEB4F"
+npx hardhat verify --network sepolia <yourcontract> "10000000000000000" "0x0000000000000000000000000000000000000000" "your-EVM-adress"
 ```
 
 ---
