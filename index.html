@@ -482,21 +482,11 @@
                 updateActionButtons(auctionEndTime, false, contractOwner);
             });
             
-            fheAuctionContract.on("RoundStarted", async (round, endTime, event) => {
-                const endTimeDate = new Date(endTime.toNumber() * 1000).toLocaleString();
-                logMessage(`[NEW ROUND] Round ${round} started. Ends: ${endTimeDate}`, 'confirmed');
-                
-                // Cập nhật biến toàn cục auctionEndTime từ sự kiện (giá trị mới nhất)
-                auctionEndTime = endTime.toNumber() * 1000; 
-
-                // Tải lại các trạng thái khác (MinDeposit, LeadBidder...)
+            fheAuctionContract.on("EmergencyEnded", async (round, event) => {
+                logMessage(`[EMERGENCY] Auction Round ${round} forcefully ended by owner/pauser. All deposits refunded.`, 'failed');
+                showNotification(`AUCTION EMERGENCY CANCELLED. Deposits can be refunded.`, 'info');
                 await getAuctionState(); 
-                
-                // Khởi động lại Timer với giá trị mới
-                startAuctionTimer();
-                
-                // Cập nhật nút (BidBtn sẽ được kích hoạt lại vì finalized=false)
-                updateActionButtons(auctionEndTime, false, contractOwner);
+                updateActionButtons(auctionEndTime, true, contractOwner); // Coi như finalized (đã kết thúc)
             });
 
             logMessage('[EVENT] Event listeners registered for all contract actions (Bid, Finalize, Refund, New Round).', 'info');
