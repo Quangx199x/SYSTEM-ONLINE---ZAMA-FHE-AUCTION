@@ -615,12 +615,7 @@ async function requestFinalizeAuction() {
         
         logMessage(`[PENDING] Finalize Request TX confirmed. Waiting for Oracle callback (onDecryptionCallback) to process winners/refunds...`, 'pending');
         showNotification('Finalization Requested. Waiting for Oracle/KMS to process.', 'info');
-        
-    } catch (error) {
-        // ... (phần xử lý lỗi giữ nguyên)
-    } finally {
-        // ... (phần finally giữ nguyên)
-    }
+   
 }
                 
             } catch (error) {
