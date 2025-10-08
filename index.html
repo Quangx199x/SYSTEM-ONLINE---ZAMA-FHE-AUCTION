@@ -605,7 +605,8 @@
                 logMessage('[PROCESS] Attempting to request finalization and decryption...', 'pending');
                 
                 // Call the single requestFinalize function
-                const tx = await fheAuctionContract.requestFinalize();
+                // Bỏ qua ước tính gas và cung cấp Gas Limit an toàn (600,000 là mức an toàn cho FHEVM)
+                const tx = await fheAuctionContract.requestFinalize({gasLimit: 600000});
                 
                 logMessage(`[TX:FINALIZE] Sending requestFinalize transaction. Hash: ${tx.hash.substring(0, 10)}...`, 'pending');
 
