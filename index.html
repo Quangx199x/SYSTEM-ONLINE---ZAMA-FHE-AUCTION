@@ -486,15 +486,28 @@
             logMessage(`[REFUND] ${recipientShort}... received refund: ${amountEth} ETH`, 'info');
         });
 
+        // --------------------------------------------------------------------------------
+        // FIX LỖI: CẬP NHẬT BIẾN TOÀN CỤC NGAY LẬP TỨC TỪ EVENT ĐỂ TIMER HOẠT ĐỘNG LẠI
+        // --------------------------------------------------------------------------------
         fheAuctionContract.on("RoundStarted", async (round, endTime, event) => {
             const endTimeDate = new Date(endTime.toNumber() * 1000).toLocaleString();
             logMessage(`[NEW ROUND] Round ${round} started. Ends: ${endTimeDate}`, 'confirmed');
             
+            // 1. CẬP NHẬT BIẾN TRẠNG THÁI TOÀN CỤC NGAY LẬP TỨC
+            auctionEndTime = endTime.toNumber() * 1000; // Lấy End Time MỚI từ Event
+            isFinalized = false; // Vòng mới bắt đầu thì trạng thái luôn là chưa finalized
+
+            // 2. Tải lại các trạng thái khác từ hợp đồng (MinDeposit, LeadBidder...)
             await getAuctionState(); 
+            
+            // 3. Khởi động lại Timer với giá trị auctionEndTime MỚI đã được cập nhật
             startAuctionTimer();
+            
+            // 4. Cập nhật các nút (BidBtn sẽ được kích hoạt lại)
             updateActionButtons(auctionEndTime, isFinalized, contractOwner);
         });
-        
+        // --------------------------------------------------------------------------------
+
         fheAuctionContract.on("EmergencyEnded", async (round, event) => {
             logMessage(`[EMERGENCY] Auction Round ${round} forcefully ended by owner/pauser. All deposits refunded.`, 'failed');
             showNotification(`AUCTION EMERGENCY CANCELLED. Deposits can be refunded.`, 'info');
@@ -729,4 +742,3 @@
 
 </script></body>
 </html>
-
