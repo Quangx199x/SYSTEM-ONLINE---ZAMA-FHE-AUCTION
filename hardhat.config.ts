@@ -28,7 +28,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      sepolia: vars.get("ETHERSCAN_API_KEY", "8ICJ99N4XPVPJIVZS3K44U4IKQVTNEC6JI"),
+      sepolia: vars.get("ETHERSCAN_API_KEY", "yourAPIkey"),
     },
   },
   gasReporter: {
@@ -85,9 +85,9 @@ const config: HardhatUserConfig = {
       evmVersion: "cancun",
     },
     remappings: [
-  // Map trực tiếp đến contracts folder
+  // Map directly to contracts folder
   `@fhevm/solidity=${FHEVM_REPO_ROOT}/library-solidity/contracts/`,
-  // Hoặc nếu có sub lib/config: adjust theo tree (e.g., nếu lib là alias)
+  // Or if there is a sub lib/config: adjust according to the tree (e.g., if the lib is an alias)
   `fhevm=${FHEVM_REPO_ROOT}/library-solidity/contracts/`,
   `@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/`,
 ],
