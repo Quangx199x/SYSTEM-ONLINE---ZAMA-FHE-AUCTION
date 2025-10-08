@@ -635,68 +635,74 @@
         }
     }
     
-    // --- NEW: EMERGENCY CANCEL LOGIC (OWNER ONLY) ---
-    async function emergencyCancelAuction() {
-        if (!fheAuctionContract || !account) {
-            showNotification('Wallet not connected.', 'error');
+    // --- NEW: EMERGENCY END LOGIC (OWNER ONLY) ---
+async function emergencyCancelAuction() {
+    if (!fheAuctionContract || !account) {
+        showNotification('Wallet not connected.', 'error');
+        return;
+    }
+
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    try {
+        // Pre-check owner and finalized status
+        const [owner, finalized, endTime] = await Promise.all([
+            fheAuctionContract.owner(),
+            fheAuctionContract.isAuctionFinalized(),
+            fheAuctionContract.auctionEndTime() // Lấy EndTime để kiểm tra Window
+        ]);
+
+        const emergencyEndTime = endTime.toNumber() * 1000 + (24 * 3600 * 1000); // Thêm 24h (EMERGENCY_DELAY)
+        
+        if (account.toLowerCase() !== owner.toLowerCase()) {
+            showNotification('Access denied. Only contract owner can cancel/end.', 'error');
+            return;
+        }
+        if (finalized) {
+            showNotification('Auction is already finalized. Cannot end.', 'error');
             return;
         }
 
-        const cancelBtn = document.getElementById('cancelBtn');
-        
-        try {
-            // Pre-check owner and finalized status
-            const [owner, finalized] = await Promise.all([
-                fheAuctionContract.owner(),
-                fheAuctionContract.isAuctionFinalized()
-            ]);
-            
-            if (account.toLowerCase() !== owner.toLowerCase()) {
-                showNotification('Access denied. Only contract owner can cancel.', 'error');
-                return;
-            }
-            if (finalized) {
-                showNotification('Auction is already finalized. Cannot cancel.', 'error');
-                return;
-            }
-            
-            cancelBtn.disabled = true;
-            cancelBtn.innerHTML = '<span class="loading"></span> REQUESTING EMERGENCY CANCEL...';
-
-            // FIX: Use low-level sendTransaction to bypass potential gas estimation issues
-            const iface = fheAuctionContract.interface;
-            const data = iface.encodeFunctionData('emergencyCancel', []);
-            const tx = await signer.sendTransaction({
-                to: CONTRACT_ADDRESS,
-                data: data,
-                gasLimit: 600000,
-                value: 0
-            });
-            
-            logMessage(`[TX:PENDING] Cancel TX sent. Hash: ${tx.hash.substring(0, 10)}...`, 'pending');
-            
-            await tx.wait();
-
-            logMessage('[EMERGENCY] Auction successfully cancelled! All deposits will be refunded.', 'confirmed');
-            showNotification("Auction CANCELLED. All bidders can claim refunds.", 'success');
-            
-            // Cập nhật trạng thái sau khi hủy thành công
-            await getAuctionState();
-            updateActionButtons(auctionEndTime, true, contractOwner); // Đánh dấu là đã kết thúc
-
-        } catch (error) {
-            console.error("Emergency cancel failed:", error);
-            const msg = error.reason || (error.data ? error.data.message : error.message) || "Unknown error";
-            logMessage(`[ERROR] Emergency Cancel failed: ${msg}`, 'failed');
-            showNotification("Emergency Cancel failed. Check console.", 'error');
-
-        } finally {
-            // Khôi phục trạng thái nút
-            cancelBtn.disabled = false;
-            cancelBtn.innerHTML = '> EMERGENCY CANCEL AUCTION (OWNER ONLY)';
+        // KIỂM TRA THỜI GIAN KHẨN CẤP
+        if (Date.now() < emergencyEndTime) {
+            const waitTime = Math.ceil((emergencyEndTime - Date.now()) / (1000 * 60 * 60));
+            showNotification(`ERROR: EMERGENCY WINDOW chưa mở. Cần chờ thêm ${waitTime} giờ sau khi đấu giá kết thúc.`, 'error');
+            return;
         }
+        
+        cancelBtn.disabled = true;
+        cancelBtn.innerHTML = '<span class="loading"></span> REQUESTING EMERGENCY END...';
+
+        // Gọi hàm emergencyEnd() và thêm Gas Limit thủ công
+        logMessage('[EMERGENCY] Owner requesting auction end via emergencyEnd()...', 'pending');
+        const tx = await fheAuctionContract.emergencyEnd({
+             gasLimit: 600000 // Thêm Gas Limit để vượt qua lỗi ước tính gas
+        }); 
+        
+        logMessage(`[TX:PENDING] Emergency End TX sent. Hash: ${tx.hash.substring(0, 10)}...`, 'pending');
+        
+        await tx.wait();
+
+        logMessage('[EMERGENCY] Auction successfully concluded and refunded via emergencyEnd().', 'confirmed');
+        showNotification("Auction EMERGENCY ENDED. All deposits are refunded.", 'success');
+        
+        // Cập nhật trạng thái sau khi hủy thành công
+        await getAuctionState();
+        updateActionButtons(auctionEndTime, true, contractOwner); // Đánh dấu là đã kết thúc
+
+    } catch (error) {
+        console.error("Emergency End failed:", error);
+        const msg = error.reason || error.message.split('execution reverted: ')[1] || "Unknown error";
+        logMessage(`[ERROR] Emergency End failed: ${msg}`, 'failed');
+        showNotification("Emergency End failed. Check console.", 'error');
+
+    } finally {
+        // Khôi phục trạng thái nút
+        cancelBtn.disabled = false;
+        cancelBtn.innerHTML = '&gt; EMERGENCY CANCEL AUCTION (OWNER ONLY)';
     }
-    // --- END NEW LOGIC ---
+}
+// --- END NEW LOGIC ---
 
     
     // --- EVENT LISTENERS INITIALIZATION ---
