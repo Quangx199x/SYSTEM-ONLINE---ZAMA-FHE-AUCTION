@@ -1,10 +1,10 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
+Uếimport { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 // Deployment function: Async, nhận hre (environment)
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, ethers } = hre;
-  const { deployer } = await getNamedAccounts();  // Sử dụng namedAccounts từ config (deployer: 0)
+  const { deployer } = await getNamedAccounts();  // Use namedAccounts from config (deployer: 0)
 
   console.log("Deploying FHEAuction with the account:", deployer);
 
@@ -13,12 +13,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const pauserSet = "0x0000000000000000000000000000000000000000";  // Address(0) optional
   const beneficiary = deployer;  // Deployer làm beneficiary
 
-  // Deploy với hardhat-deploy (tự động save artifacts, tags)
+  // Deploy with hardhat-deploy (auto save artifacts, tags)
   await deployments.deploy("FHEAuction", {
     from: deployer,
     args: [minDeposit, pauserSet, beneficiary],
-    log: true,  // Log chi tiết tx
-    autoMine: true,  // Auto mine trên local (nếu test)
+    log: true,  // Log tx
+    autoMine: true,  // Auto mine on local (test)
   });
 
   console.log("FHEAuction deployed successfully!");
@@ -26,6 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 
-// Tags để run selective (e.g., npx hardhat deploy --tags FHEAuction)
+// Tags to run selective (e.g., npx hardhat deploy --tags FHEAuction)
 func.tags = ["FHEAuction"];
-func.dependencies = [];  // Không phụ thuộc script khác
+func.dependencies = []; 
