@@ -358,7 +358,7 @@
             try {
                 fheStatus.textContent = '[FHE SDK] Loading @fhevm/sdk (v0.7.0 via jsDelivr CDN)...';
                 // FIXED: Correct package name and version for ESM
-                const mod = await import('https://cdn.jsdelivr.net/npm/@zama-fhe/relayer-sdk@0.2.0/dist/index.mjs');
+                const mod = await import('https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.umd.cjs');
                 const { initFhevm, createInstance } = mod;
 
                 fheStatus.textContent = '[FHE SDK] Initializing FHEVM WASM (initFhevm)...';
