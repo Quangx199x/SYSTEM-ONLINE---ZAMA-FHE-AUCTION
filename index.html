@@ -224,6 +224,7 @@
     let timerInterval; 
     let minDepositWei; 
     let auctionEndTime = 0; 
+    let isFinalized = false;
     let contractOwner = null; 
     
     // --- UTILITY FUNCTIONS ---
@@ -300,39 +301,48 @@
     }
 
     // --- TIMER LOGIC ---
+    function updateTimerDisplay() {
+        const timerElement = document.getElementById('timeLeft');
+        const now = Date.now();
+        const remaining = auctionEndTime - now;
+
+        if (remaining <= 0) {
+            clearInterval(timerInterval);
+            timerElement.textContent = 'AUCTION CLOSED!';
+            logMessage('[TIMER] Auction end time reached. Finalization can proceed.', 'info');
+            
+            if (fheAuctionContract && account) {
+                fheAuctionContract.isAuctionFinalized().then(finalized => {
+                    updateActionButtons(auctionEndTime, finalized, contractOwner);
+                }).catch(e => {
+                    console.error("Error updating buttons on end:", e);
+                });
+            }
+        } else {
+            const totalSeconds = Math.floor(remaining / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            timerElement.textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
     function startAuctionTimer() {
         if (timerInterval) clearInterval(timerInterval);
 
         const timerElement = document.getElementById('timeLeft');
+        // Reset display if it was closed
+        if (timerElement.textContent === 'AUCTION CLOSED!' || timerElement.textContent.includes('-')) {
+            timerElement.textContent = '--:--:--';
+        }
 
-        timerInterval = setInterval(async () => {
-            const now = Date.now();
-            const remaining = auctionEndTime - now;
+        // Immediate update
+        updateTimerDisplay();
 
-            if (remaining <= 0) {
-                clearInterval(timerInterval);
-                timerElement.textContent = 'AUCTION CLOSED!';
-                logMessage('[TIMER] Auction end time reached. Finalization can proceed.', 'info');
-                
-                if (fheAuctionContract && account) {
-                    try {
-                        const finalized = await fheAuctionContract.isAuctionFinalized();
-                        updateActionButtons(auctionEndTime, finalized, contractOwner);
-                    } catch (e) {
-                        console.error("Error updating buttons on end:", e);
-                    }
-                }
-
-            } else {
-                const totalSeconds = Math.floor(remaining / 1000);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const seconds = totalSeconds % 60;
-
-                timerElement.textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-        }, 1000);
+        // Then interval
+        timerInterval = setInterval(updateTimerDisplay, 1000);
     }
 
     // --- FHE SDK INITIALIZATION ---
@@ -406,6 +416,7 @@
             ]);
             
             contractOwner = owner; 
+            isFinalized = finalized;
 
             minDepositWei = minDeposit;
             const minDepositEth = ethers.utils.formatEther(minDeposit);
@@ -445,7 +456,7 @@
             const bidderShort = bidder.substring(0, 6);
             const depositEth = ethers.utils.formatEther(depositAmount);
             logMessage(`[BID:RECEIVED] Round ${round}: Bid by ${bidderShort}... Deposit: ${depositEth} ETH`, 'info');
-            getAuctionState().then(state => updateActionButtons(auctionEndTime, false, contractOwner));
+            getAuctionState().then(state => updateActionButtons(auctionEndTime, isFinalized, contractOwner));
         });
 
         fheAuctionContract.on("DecryptionRequested", (requestId, event) => {
@@ -466,7 +477,7 @@
             
             await getAuctionState();
             startAuctionTimer();
-            updateActionButtons(auctionEndTime, true, contractOwner);
+            updateActionButtons(auctionEndTime, isFinalized, contractOwner);
         });
         
         fheAuctionContract.on("RefundIssued", (recipient, amount, event) => {
@@ -481,14 +492,14 @@
             
             await getAuctionState(); 
             startAuctionTimer();
-            updateActionButtons(auctionEndTime, false, contractOwner);
+            updateActionButtons(auctionEndTime, isFinalized, contractOwner);
         });
         
         fheAuctionContract.on("EmergencyEnded", async (round, event) => {
             logMessage(`[EMERGENCY] Auction Round ${round} forcefully ended by owner/pauser. All deposits refunded.`, 'failed');
             showNotification(`AUCTION EMERGENCY CANCELLED. Deposits can be refunded.`, 'info');
             await getAuctionState(); 
-            updateActionButtons(auctionEndTime, true, contractOwner); // Coi như finalized (đã kết thúc)
+            updateActionButtons(auctionEndTime, isFinalized, contractOwner); // Coi như finalized (đã kết thúc)
         });
 
         logMessage('[EVENT] Event listeners registered for all contract actions (Bid, Finalize, Refund, New Round).', 'info');
@@ -534,7 +545,7 @@
 
             document.getElementById('walletStatus').innerHTML = `
                 <p class="log-line log-confirmed">[STATUS] Wallet: CONNECTED & READY</p>
-                <p class="log-line">[ADDRESS] ${account.substring(0, 10)}... ${account.toLowerCase() === contractOwner.toLowerCase() ? '(OWNER)' : ''}</p>
+                <p class="log-line">[ADDRESS] ${account.substring(0, 10)}... ${account.toLowerCase() === contractOwner?.toLowerCase() ? '(OWNER)' : ''}</p>
                 <p class="log-line">[NETWORK] **Sepolia FHEVM (Zama RPC)**</p>
             `;
 
@@ -545,8 +556,7 @@
             logMessage('[SUCCESS] Wallet, Network, and Contract OK with Zama RPC. Ready to bid/finalize.', 'confirmed');
             startAuctionTimer();
 
-            const finalized = await fheAuctionContract.isAuctionFinalized();
-            updateActionButtons(auctionEndTime, finalized, contractOwner); 
+            updateActionButtons(auctionEndTime, isFinalized, contractOwner); 
 
             window.ethereum.on('accountsChanged', () => { window.location.reload(); });
             window.ethereum.on('chainChanged', () => { window.location.reload(); });
@@ -633,8 +643,9 @@
             logMessage(`[FATAL] Finalize failed: ${msg}`, 'failed');
         } finally {
             // Cập nhật lại trạng thái nút (sẽ bị disable nếu finalized=false)
-            const finalizedState = await fheAuctionContract.isAuctionFinalized();
-            updateActionButtons(auctionEndTime, finalizedState, contractOwner);
+            getAuctionState().then(() => {
+                updateActionButtons(auctionEndTime, isFinalized, contractOwner);
+            });
         }
     }
     
@@ -691,7 +702,7 @@
             
             // Cập nhật trạng thái sau khi hủy thành công
             await getAuctionState();
-            updateActionButtons(auctionEndTime, true, contractOwner); // Đánh dấu là đã kết thúc
+            updateActionButtons(auctionEndTime, isFinalized, contractOwner); // Đánh dấu là đã kết thúc
 
         } catch (error) {
             console.error("Emergency cancel failed:", error);
